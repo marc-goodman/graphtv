@@ -15,5 +15,10 @@
   "bugs": {
     "url": "https://github.com/marc-goodman/graphtv/issues"
   },
-  "homepage": "https://github.com/marc-goodman/graphtv#readme"
+  "homepage": "https://github.com/marc-goodman/graphtv#readme",
+  "dependencies": {
+    "imdb": "^1.1.0",
+    "imdb-api": "^3.1.2",
+    "mssql": "^4.1.0"
+  }
 }
