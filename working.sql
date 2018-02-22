@@ -1,39 +1,39 @@
-USE master;
-DROP DATABASE IMDB;
-GO
-
-CREATE DATABASE IMDB;
-GO
 USE IMDB;
 
-CREATE TABLE title_ratings (
-    tconst NCHAR(9) NOT NULL PRIMARY KEY,
-    averageRating NUMERIC(4, 1) NOT NULL,
-    numVotes INT NOT NULL
-);
-
-INSERT INTO title_ratings VALUES ('tt0000001', '5.8', '1350');
-
-SELECT TOP 50 * FROM title_ratings;
 SELECT TOP 50 * FROM name_basics;
 SELECT TOP 50 * FROM title_akas;
 SELECT TOP 50 * FROM title_basics;
+-- SELECT TOP 50 * FROM title_crew;
+SELECT TOP 50 * FROM title_episode;
 SELECT TOP 50 * FROM title_principals;
+SELECT TOP 50 * FROM title_ratings;
+SELECT TOP 50 * FROM title_directors;
+SELECT TOP 50 * FROM title_writers;
+SELECT TOP 50 * FROM name_known_for_titles;
+SELECT TOP 50 * FROM name_profession;
+SELECT TOP 50 * FROM title_genre;
 
-DELETE FROM title_ratings;
-DELETE FROM name_basics;
-DELETE FROM title_akas;
-DELETE FROM title_basics;
-DELETE FROM title_principals;
-
-SELECT COUNT(*) FROM title_ratings;
-SELECT COUNT(*) FROM title_principals;
+SELECT COUNT(*) AS count FROM name_basics;
+SELECT COUNT(*) AS count FROM title_akas;
+SELECT COUNT(*) AS count FROM title_basics;
+-- SELECT COUNT(*) AS count FROM title_crew;
+SELECT COUNT(*) AS count FROM title_episode;
+SELECT COUNT(*) AS count FROM title_principals;
+SELECT COUNT(*) AS count FROM title_ratings;
+SELECT COUNT(*) AS count FROM title_directors;
+SELECT COUNT(*) AS count FROM title_writers;
+SELECT COUNT(*) AS count FROM name_known_for_titles;
+SELECT COUNT(*) AS count FROM name_profession;
+SELECT COUNT(*) AS count FROM title_genre;
 GO
 
 SELECT TOP 50	*
-FROM			title_basics
-JOIN			title_ratings ON title_basics.tconst = title_ratings.tconst
+FROM			title_basics AS TB
+JOIN			title_ratings AS TR ON TB.tconst = TR.tconst
+JOIN			title_episode AS TE ON TB.tconst = TE.tconst
+JOIN			title_basics AS PTB ON TE.parentTconst = PTB.tconst
 WHERE			numVotes > 50000
+AND				averageRating >= 9.7
 ORDER BY		averageRating DESC, numVotes DESC;
 
 SELECT TOP 50	* 
@@ -45,8 +45,7 @@ ORDER BY title_principals.tconst DESC;
 SELECT		TOP 50 *
 FROM		title_ratings;
 
-SELECT		TOP 50
-			seasonNumber,
+SELECT		seasonNumber,
 			episodeNumber,
 			primaryTitle,
 			averageRating,
@@ -60,3 +59,182 @@ WHERE		parentTconst IN (
 	WHERE		primaryTitle = 'Erased'
 )
 ORDER BY seasonNumber, episodeNumber;
+
+SELECT		primaryName,
+			COUNT(*) AS Count
+FROM		title_basics AS TB
+JOIN		title_episode AS TE ON TB.tconst = TE.parentTconst
+JOIN		title_basics AS TBE ON TE.tconst = TBE.tconst
+JOIN		title_directors AS TD ON TD.tconst = TBE.tconst
+JOIN		name_basics AS NB ON TD.nconst = NB.nconst
+WHERE		TB.primaryTitle = 'Steins;Gate'
+GROUP BY	primaryName
+ORDER BY	COUNT(*) DESC;
+
+SELECT		*
+FROM		name_basics
+WHERE		primaryName = 'Kazuhiro Ozawa'
+OR			primaryName = 'Kanji Wakabayashi';
+
+SELECT		TB2.primaryTitle AS "Series Title",
+			TB1.primaryTitle AS "Episode Title",
+			averageRating AS "Average Rating"
+FROM		title_basics AS TB1
+LEFT JOIN	title_episode AS TE ON TB1.tconst = TE.tconst
+LEFT JOIN	title_basics AS TB2 ON TE.parentTconst = TB2.tconst
+LEFT JOIN	title_ratings AS TR ON TB1.tconst = TR.tconst
+WHERE		TB1.tconst IN (
+	SELECT		tconst
+	FROM		title_directors
+	WHERE		nconst IN ('nm2324235', 'nm1159969')
+)
+ORDER BY averageRating DESC;
+
+SELECT		*
+FROM		title_basics
+WHERE		tconst = 'tt0486531';
+
+SELECT		*
+FROM		title_writers AS TW
+JOIN		name_basics AS NB ON TW.nconst = NB.nconst
+JOIN		title_basics AS TB ON TW.tconst = TB.tconst
+WHERE		TW.tconst IN (
+	SELECT		tconst
+	FROM		title_basics
+	WHERE		primaryTitle = 'Rick and Morty'
+);
+
+SELECT		*
+FROM		title_directors AS TD
+JOIN		name_basics AS NB ON TD.nconst = NB.nconst
+JOIN		title_basics AS TB ON TD.tconst = TB.tconst
+WHERE		TD.tconst IN (
+	SELECT		tconst
+	FROM		title_basics
+	WHERE		primaryTitle = 'Rick and Morty'
+);
+
+SELECT		TB2.primaryTitle,
+			TB2.startYear,
+			ISNULL(TB2.endYear, TB2.startYear),
+			COUNT(*) AS "Number of Appearances"
+FROM		title_basics AS TB
+LEFT JOIN	title_episode AS TE ON TB.tconst = TE.tconst
+LEFT JOIN	title_basics AS TB2 ON TE.parentTconst = TB2.tconst
+WHERE		TB.tconst IN (
+	SELECT		tconst
+	FROM		title_principals
+	WHERE		nconst IN (
+		SELECT		nconst
+		FROM		name_basics
+		WHERE		primaryName = 'Betty White'
+	)
+)
+GROUP BY	TB2.primaryTitle, TB2.startYear, TB2.endYear
+ORDER BY	TB2.startYear, TB2.primaryTitle;
+
+SELECT		*
+FROM		title_basics
+WHERE		tconst IN (
+	SELECT		tconst
+	FROM		name_known_for_titles
+	WHERE		nconst IN (
+		SELECT		nconst
+		FROM		name_basics
+		WHERE		primaryName = 'Betty White'
+	)
+);
+
+SELECT		*
+FROM		name_profession
+WHERE		nconst IN (
+	SELECT		nconst
+	FROM		name_basics
+	WHERE		primaryName = 'Sutton Foster'
+);
+
+SELECT			profession,
+				COUNT(*) AS "Count"
+FROM			name_profession
+GROUP BY		profession
+ORDER BY		COUNT(*) DESC;
+
+SELECT			category,
+				COUNT(*) AS "Count"
+FROM			title_principals
+GROUP BY		category
+ORDER BY		COUNT(*) DESC;
+
+SELECT		primaryName,
+			category,
+			characters
+FROM		title_principals AS TP
+JOIN		title_basics AS TB ON TP.tconst = TB.tconst
+JOIN		name_basics AS NB ON TP.nconst = NB.nconst
+WHERE		TB.tconst IN (
+	SELECT		tconst
+	FROM		title_basics
+	WHERE		primaryTitle = 'Your Name'
+	AND			titleType = 'movie'
+);
+
+SELECT		genre,
+			COUNT(*) AS "count"
+FROM		title_genre
+GROUP BY	genre
+ORDER BY	COUNT(*) DESC;
+
+SELECT		titleType,
+			COUNT(*) AS "count"
+FROM		title_basics
+GROUP BY	titleType
+ORDER BY	COUNT(*) DESC;
+
+SELECT		primaryTitle,
+			startYear,
+			averageRating,
+			numVotes,
+			primaryName AS "director"
+FROM		title_basics AS TB
+JOIN		title_ratings AS TR ON TB.tconst = TR.tconst
+LEFT JOIN	title_directors AS TD ON TB.tconst = TD.tconst
+LEFT JOIN	name_basics AS NB ON TD.nconst = NB.nconst
+WHERE		TB.tconst IN (
+	SELECT		TOP 50 TG.tconst
+	FROM		title_genre AS TG
+	JOIN		title_ratings AS TR ON TG.tconst = TR.tconst
+	JOIN		title_basics AS TB ON TB.tconst = TG.tconst
+	WHERE		genre = 'Sci-Fi'
+	AND			numVotes >= 10000
+	AND			titleType = 'movie'
+	ORDER BY	averageRating DESC
+)
+ORDER BY	averageRating DESC, primaryTitle;
+
+SELECT		*
+FROM		title_basics
+JOIN		title_ratings ON title_basics.tconst = title_ratings.tconst
+JOIN		title_genre ON title_basics.tconst = title_genre.tconst
+WHERE		primaryTitle = 'Steins;Gate'
+AND			titleType = 'tvSeries';
+
+
+SELECT		primaryName
+FROM		name_basics
+WHERE		nconst IN (
+	SELECT		nconst
+	FROM		title_principals
+	WHERE		tconst IN (
+		SELECT		tconst
+		FROM		title_basics
+		WHERE		primaryTitle = 'Apocalypse Now'
+	)
+	AND		characters LIKE '%Kurtz%'
+);
+
+
+EXEC master..xp_fixeddrives
+GO
+
+EXEC IMDB..sp_spaceused
+GO

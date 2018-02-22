@@ -56,6 +56,9 @@ CREATE TABLE title_crew (
     writers NVARCHAR(MAX)
 );
 
+CREATE INDEX IX_title_crew_directors ON title_crew(directors);
+CREATE INDEX IX_title_crew_writers ON title_crew(writers);
+
 CREATE TABLE title_episode (
     tconst NCHAR(9) NOT NULL PRIMARY KEY,
     parentTconst NCHAR(9) NOT NULL,
@@ -77,6 +80,7 @@ CREATE TABLE title_principals (
 
 CREATE INDEX IX_title_principals_tconst ON title_principals(tconst);
 CREATE INDEX IX_title_principals_nconst ON title_principals(nconst);
+CREATE INDEX IX_title_principals_category ON title_principals(category);
 
 CREATE TABLE title_ratings (
     tconst NCHAR(9) NOT NULL PRIMARY KEY,
@@ -84,3 +88,30 @@ CREATE TABLE title_ratings (
     numVotes INT NOT NULL
 );
 GO
+
+create FUNCTION [dbo].[Split](@String varchar(MAX), @Delimiter char(1))       
+returns @temptable TABLE (items varchar(MAX))       
+as       
+begin      
+    declare @idx int       
+    declare @slice varchar(8000)       
+
+    select @idx = 1       
+        if len(@String)<1 or @String is null  return       
+
+    while @idx!= 0       
+    begin       
+        set @idx = charindex(@Delimiter,@String)       
+        if @idx!=0       
+            set @slice = left(@String,@idx - 1)       
+        else       
+            set @slice = @String       
+
+        if(len(@slice)>0)  
+            insert into @temptable(Items) values(@slice)       
+
+        set @String = right(@String,len(@String) - @idx)       
+        if len(@String) = 0 break       
+    end   
+return 
+end;
