@@ -92,7 +92,9 @@ ORDER BY averageRating DESC;
 
 SELECT		*
 FROM		title_basics
-WHERE		tconst = 'tt0486531';
+JOIN		title_episode ON title_episode.parentTconst = title_basics.tconst
+JOIN		title_ratings ON title_ratings.tconst = title_episode.tconst
+WHERE		title_basics.tconst = 'tt0805824';
 
 SELECT		*
 FROM		title_writers AS TW
@@ -204,9 +206,9 @@ WHERE		TB.tconst IN (
 	FROM		title_genre AS TG
 	JOIN		title_ratings AS TR ON TG.tconst = TR.tconst
 	JOIN		title_basics AS TB ON TB.tconst = TG.tconst
-	WHERE		genre = 'Sci-Fi'
-	AND			numVotes >= 10000
-	AND			titleType = 'movie'
+	WHERE		genre = 'Sci-fi'
+	AND			numVotes >= 1000
+	AND			titleType = 'tvSeries'
 	ORDER BY	averageRating DESC
 )
 ORDER BY	averageRating DESC, primaryTitle;
@@ -232,6 +234,100 @@ WHERE		nconst IN (
 	AND		characters LIKE '%Kurtz%'
 );
 
+USE IMDB;
+
+SELECT		TB2.primaryTitle AS seriesTitle,
+            title_episode.tconst,
+            seasonNumber,
+			episodeNumber,
+			TB1.primaryTitle,
+			averageRating,
+			numVotes,
+			TB2.tconst
+FROM		title_episode
+JOIN		title_basics AS TB1 ON title_episode.tconst = TB1.tconst
+JOIN		title_ratings ON title_ratings.tconst = TB1.tconst
+JOIN        title_basics AS TB2 ON title_episode.parentTconst = TB2.tconst
+WHERE		TB2.primaryTitle = 'steins;gate'
+ORDER BY    seasonNumber, episodeNumber;
+
+SELECT	*
+FROM	(
+	SELECT	nconst
+	FROM	title_principals
+	WHERE	tconst = 'tt0078788'
+	UNION ALL
+	SELECT	nconst
+	FROM	title_directors
+	WHERE	tconst = 'tt0078788'
+	UNION ALL
+	SELECT	nconst
+	FROM	title_writers
+	WHERE	tconst = 'tt0078788'
+	UNION ALL
+	SELECT	nconst
+	FROM	name_known_for_titles
+	WHERE	tconst = 'tt0078788'
+) AS people
+JOIN	name_basics ON people.nconst = name_basics.nconst
+ORDER BY	name_basics.primaryName;
+
+SELECT		DISTINCT KFT2.*, NB.primaryName, TB.primaryTitle
+FROM		name_known_for_titles AS KFT1
+JOIN		name_known_for_titles AS KFT2 ON KFT1.nconst = KFT2.nconst
+JOIN		name_basics AS NB ON KFT2.nconst = NB.nconst
+JOIN		title_basics AS TB ON KFT2.tconst = TB.tconst
+WHERE		KFT1.tconst = 'tt0098936';
+
+SELECT		primaryName,
+			KFT2.category,
+			COUNT(*) AS count
+FROM		title_principals AS KFT1
+JOIN		title_principals AS KFT2 ON KFT1.nconst = KFT2.nconst
+JOIN		name_basics AS NB ON KFT2.nconst = NB.nconst
+JOIN		title_basics AS TB ON KFT2.tconst = TB.tconst
+WHERE		KFT1.tconst = 'tt0078788'
+GROUP BY	primaryName, KFT2.category
+ORDER BY	COUNT(*) DESC;
+
+SELECT		*
+FROM		title_basics
+WHERE		primaryTitle = 'Apocalypse Now';
+
+SELECT		category,
+			COUNT(*) AS "count"
+FROM		title_principals
+GROUP BY	category
+ORDER BY	COUNT(*) DESC;
+
+SELECT		DISTINCT nconst
+FROM		title_principals
+WHERE		tconst IN (
+	SELECT		tconst
+	FROM		title_principals
+	WHERE		nconst IN (
+		SELECT		nconst
+		FROM		title_principals
+		WHERE		tconst IN (
+			SELECT		tconst
+			FROM		title_principals
+			WHERE		nconst IN (
+				SELECT		nconst
+				FROM		title_principals
+				WHERE		tconst IN (
+					SELECT		tconst
+					FROM		title_principals
+					WHERE		nconst = (
+						SELECT		nconst
+						FROM		name_basics
+						WHERE		primaryName = 'Kevin Bacon'
+						AND			birthYear = 1958
+					)
+				)
+			)
+		)
+	)
+);
 
 EXEC master..xp_fixeddrives
 GO

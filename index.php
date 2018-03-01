@@ -31,6 +31,77 @@
         <script>
             var AXIS_SIZE = 50;
             var MARGIN = 50;
+
+            function regressSeasonRatings(episodes) {
+                var sumx=0.0, sumy=0.0, sumxx=0.0, sumyy=0.0, sumxy=0.0;
+                var mx, my, xxvar, yyvar, xyvar;
+                var n = episodes.length;
+
+                episodes.forEach(e => {
+                    var x = Number(e.episodeNumber);
+                    var y = Number(e.averageRating);
+                    sumx += x;
+                    sumy += y;
+                    sumxx += x * x;
+                    sumyy += y * y;
+                    sumxy += x * y;
+                });
+                mx = sumx / n;
+                my = sumy / n;
+                xxvar = (sumxx - 2.0 * mx * sumx + n * mx * mx) / n;
+                yyvar = (sumyy - 2.0 * my * sumy + n * my * my)/ n;
+                xyvar = (sumxy - mx * sumy - my * sumx + n * mx * my) / n;
+                var slope = xyvar / xxvar;
+                return [slope, my - slope * mx];
+            }
+
+            function isCoprime(v, top) {
+                for (var i = 2; i * i < top; i++)
+                    if (v % i == 0 && top % i == 0)
+                        return false;
+                return true;
+            }
+
+            function findCoprime(top) {
+                if (top < 5)
+                    return 1;
+
+                var v = Math.floor(top / 3);
+
+                while (!isCoprime(v, top))
+                    v++;
+                return v;
+            }
+
+            function spectrum2(w, coprime, top) {
+                // var STEP = coprime * 2 * Math.PI / top;
+                var STEP = 0.6180339887 * 2 * Math.PI;
+                var SQRT_2 = Math.sqrt(2);
+
+                var theta = STEP * w;
+                var s = Math.sin(theta);
+                var c = Math.cos(theta);
+
+                if (s > 0) {
+                    var y = 255 * s;
+                    var b = 0;
+                } else {
+                    var y = 0;
+                    var b = -255 * s;
+                }
+                if (c > 0) {
+                    var r = 255 * c;
+                    var g = 0;
+                } else {
+                    var r = 0;
+                    var g = -255 * c;
+                }
+                var fr = Math.floor((r + y) / SQRT_2);
+                var fg = Math.floor((g + y) / SQRT_2);
+                var fb = Math.floor(b);
+                return `rgb(${fr}, ${fg}, ${fb})`;
+            }
+
             function spectrum(w) {
                 if (w > 1)w = 1;
                 if (w < 0)w = 0;
@@ -155,6 +226,8 @@ QUERY;
                         seasons = s;
                 });
 
+                var coprime = findCoprime(seasons);
+
                 max = Math.ceil(max + 0.1);
                 min = Math.floor(min - 0.1);
 
@@ -178,13 +251,49 @@ QUERY;
                     label.setAttribute('font-size', 16);
                     graph.appendChild(label);
                 }
+                var eps = [];
+                var prev = -1;
+                var smin;
+                var smax;
+                var emin;
+                var emax;
+                for (var i = 0; i <= data.length; i++) {
+                    var e = data[i];
+                    if (e && e.seasonNumber == prev) {
+                        eps.push(e);
+                        emax = e.episodeNumber;
+                        smax = i;
+                    } else {
+                        if (eps.length > 1) {
+                            var [slope, intercept] = regressSeasonRatings(eps);
+                            var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                            line.setAttribute('stroke', spectrum2(prev, coprime, seasons));
+                            line.setAttribute('stroke-width', 3);
+                            line.setAttribute('x1', AXIS_SIZE + xSpacing * (0.5 + smin));
+                            line.setAttribute('x2', AXIS_SIZE + xSpacing * (0.5 + smax));
+                            line.setAttribute('y1', MARGIN + dataHeight - ySpacing * (emin * slope + intercept - min));
+                            line.setAttribute('y2', MARGIN + dataHeight - ySpacing * (emax * slope + intercept - min));
+                            graph.appendChild(line);
+                        }
+                        if (e) {
+                            eps = [e];
+                            emin = e.episodeNumber;
+                            emax = emin;
+                            smin = i;
+                            smax = i;
+                            prev = e.seasonNumber;
+                        }
+                    }
+                }
                 data.forEach((episode, pos) => {
-                    var color = spectrum((episode.seasonNumber || 0) / seasons);
+                    // var color = spectrum((episode.seasonNumber || 0) / seasons);
+                    var color = spectrum2(episode.seasonNumber || 0, coprime, seasons);
                     var point = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                     var xPos = AXIS_SIZE + xSpacing * (0.5 + pos);
                     var yPos = MARGIN + dataHeight - ySpacing * (episode.averageRating - min);
                     point.setAttribute('fill', color);
-                    point.setAttribute('r', '5px');
+                    point.setAttribute('stroke', 'Black');
+                    point.setAttribute('r', '4px');
                     point.setAttribute('cx', xPos);
                     point.setAttribute('cy', yPos);
                     graph.appendChild(point);
