@@ -50,7 +50,7 @@ function add_user($username, $hash)
 {
     $db = new PDO("sqlsrv:Server=" . DB_SERVER . ";Database=" . DB_DATABASE, DB_USER, DB_PASSWORD);
     $query = "INSERT INTO";
-    $query .= " " . USERS_TABLE . " (" . USERS_USERNAME_FIELD . ", " . USERS_HASH_FIELD . ", " . USER_ROLE_FIELD . ")";
+    $query .= " " . USERS_TABLE . " (" . USERS_USERNAME_FIELD . ", " . USERS_HASH_FIELD . ", " . USERS_ROLE_FIELD . ")";
     $query .= " VALUES ('$username', '$hash', 'user');"; // vulnerable to SQL injection attacks
     $db->query($query);
 }
